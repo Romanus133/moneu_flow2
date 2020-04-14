@@ -1,23 +1,36 @@
-import bcrypt          from 'bcryptjs';
-import jwt             from 'jsonwebtoken';
-import UserRepository  from '../repositories/UserRepository.js';
-import AgentRepository from '../repositories/AgentRepository.js';
+import bcrypt                from 'bcryptjs';
+import jwt                   from 'jsonwebtoken';
+import UserRepository        from '../repositories/UserRepository.js';
+import AgentRepository       from '../repositories/AgentRepository.js';
+import TransactionRepository from '../repositories/TransactionRepository.js';
 
 class UserController {
     constructor(pool) {
-        this.get = this.get.bind(this);
+        this.getUser = this.getUser.bind(this);
         this.register = this.register.bind(this);
         this.login = this.login.bind(this);
         this.update = this.update.bind(this);
-        this.delete = this.delete.bind(this);
         this.getBalance = this.getBalance.bind(this);
+        this.getUserTransactions = this.getUserTransactions.bind(this);
+        this.createUserTransactions = this.createUserTransactions.bind(this);
 
         this.userRepository = new UserRepository(pool);
         this.agentRepository = new AgentRepository(pool);
+        this.transactionRepository = new TransactionRepository(pool);
     }
 
-    async get(request, response) {
-        response.send('Get user');
+    async getUser(request, response, next) {
+        const { id } = request.params;
+        const { user } = request;
+
+        if (user !== undefined && user.id === id) {
+            const balance = await this.userRepository.getUserBalance(user.id);
+
+            user._balance = balance;
+            response.json(user);
+        } else {
+            next(new Error('Invalid user information'));
+        }
     }
 
     async register(request, response) {
@@ -64,12 +77,17 @@ class UserController {
         }
     }
 
-    async update(request, response) {
-        response.send('Update user');
-    }
+    async update(request, response, next) {
+        const { id } = request.params;
+        const { user } = request;
+        const { name } = request.body;
 
-    async delete(request, response) {
-        response.send('Delete user');
+        if (user !== undefined && user.id === id) {
+            const updatedUser = await this.userRepository.update(user, { name });
+            response.json(updatedUser);
+        } else {
+            next(new Error('Invalid user information'));
+        }
     }
 
     async getBalance(request, response) {
@@ -78,6 +96,38 @@ class UserController {
         const balance = await this.userRepository.getUserBalance(userId);
 
         response.send({ balance });
+    }
+
+    async getUserTransactions(request, response, next) {
+        const userId = request.params.id;
+        const { user } = request;
+        const params = request.query !== undefined ? request.query : {};
+
+        if (user !== undefined && user.id === userId) {
+            // eslint-disable-next-line max-len
+            const transactions = await this.transactionRepository.getTransactionByParams(userId, params);
+
+            response.json(transactions);
+        } else {
+            next(new Error('Invalid user information'));
+        }
+    }
+
+    async createUserTransactions(request, response, next) {
+        const {
+            agentName, count, categoryId, transactionType,
+        } = request.body;
+        const userId = request.params.id;
+        const { user } = request;
+
+        if (user !== undefined && user.id === userId) {
+            // eslint-disable-next-line max-len
+            const transaction = await this.transactionRepository.createTransaction(user, agentName, count, categoryId, transactionType);
+
+            response.json(transaction);
+        } else {
+            next(new Error('Invalid user information'));
+        }
     }
 }
 

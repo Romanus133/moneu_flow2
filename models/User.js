@@ -35,6 +35,7 @@ class User {
             email: this.email,
             name: this.name,
             token: this.token,
+            balance: this._balance !== undefined ? this._balance : 0,
         };
     }
 }
