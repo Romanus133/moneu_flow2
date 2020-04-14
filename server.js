@@ -1,6 +1,5 @@
 import process        from 'process';
 import express        from 'express';
-import transaction    from './routers/TransactionRouter.js';
 import CategoryRouter from './routers/CategoryRouter.js';
 import pool           from './database.js';
 import UserRouter     from './routers/UserRouter.js';
@@ -18,16 +17,14 @@ const server = app.listen(PORT, async () => {
     app.use(express.json());
     app.use(express.raw());
 
-    app.use('/api/transactions', transaction);
-
     const userRouter = new UserRouter(pool);
     app.use('/api/users', userRouter.router);
-
 
     const categoryRouter = new CategoryRouter(pool);
     app.use('/api/categories', auth, categoryRouter.router);
 
-    app.use((error, request, response) => {
+    // eslint-disable-next-line no-unused-vars
+    app.use((error, request, response, next) => {
         console.log(error.stack);
         response.status(500).send(error.message);
     });
